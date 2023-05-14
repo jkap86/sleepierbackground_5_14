@@ -629,30 +629,37 @@ exports.leaguemates = async (app) => {
 
 
 exports.userTrades = async (app) => {
-    const trades = await Trade.findAll({
-        attributes: ['transaction_id', 'managers'],
-        raw: true
-    })
 
-    const userTradeData = []
+    for (let i = 0; i < 200000; i += 25000) {
+        const trades = await Trade.findAll({
+            order: [['transaction_id', 'DESC']],
+            offset: i,
+            limit: 25000,
+            attributes: ['transaction_id', 'managers'],
+            raw: true
 
-    trades.map(trade => {
-        return trade.managers
-            .filter(m => parseInt(m) > 0)
-            .map(m => {
-                return userTradeData.push({
-                    userUserId: m,
-                    tradeTransactionId: trade.transaction_id
+        })
+
+        const userTradeData = []
+
+        trades.map(trade => {
+            return trade.managers
+                .filter(m => parseInt(m) > 0)
+                .map(m => {
+                    return userTradeData.push({
+                        userUserId: m,
+                        tradeTransactionId: trade.transaction_id
+                    })
                 })
-            })
-    })
+        })
 
 
-    try {
+        try {
 
-        await db.sequelize.model('userTrades').bulkCreate(userTradeData, { ignoreDuplicates: true })
-    } catch (error) {
-        console.log(error)
+            await db.sequelize.model('userTrades').bulkCreate(userTradeData, { ignoreDuplicates: true })
+        } catch (error) {
+            console.log(error)
+        }
     }
 }
 
