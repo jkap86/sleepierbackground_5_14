@@ -9,7 +9,5 @@ module.exports = app => {
 
     syncs.trades(app)
 
-    setTimeout(() => {
-        syncs.userTrades(app)
-    }, 15000)
+
 }

@@ -108,7 +108,7 @@ exports.trades = async (app) => {
         const trades_users = []
 
         for (let j = 0; j < increment; j += 50) {
-            await Promise.all(leagues_to_update.slice(j, j + 50).map(async league => {
+            await Promise.all(leagues_to_update.filter(l => l.dataValues.rosters.find(r => r?.players?.length > 0)).slice(j, j + 50).map(async league => {
 
                 let transactions_league;
 
@@ -318,7 +318,7 @@ exports.leaguemates = async (app) => {
 
             app.set('leagues_to_update', leagues_to_update)
 
-            leagues_batch = await getBatchLeaguesDetails(leagues_to_add_batch)
+            leagues_batch = await getBatchLeaguesDetails(leagues_to_add_batch, state.display_week)
 
         } else if (leagues_to_update.length > 0) {
             const leagues_to_update_batch = leagues_to_update.slice(0, increment_new)
@@ -329,7 +329,7 @@ exports.leaguemates = async (app) => {
 
             app.set('leagues_to_update', leagues_to_update_pending)
 
-            leagues_batch = await getBatchLeaguesDetails(leagues_to_update_batch)
+            leagues_batch = await getBatchLeaguesDetails(leagues_to_update_batch, state.display_week)
 
         }
 
@@ -532,7 +532,7 @@ exports.leaguemates = async (app) => {
         return original_picks
     }
 
-    const getLeagueDetails = async (leagueId) => {
+    const getLeagueDetails = async (leagueId, display_week) => {
         try {
             const league = await axios.get(`https://api.sleeper.app/v1/league/${leagueId}`)
             const users = await axios.get(`https://api.sleeper.app/v1/league/${leagueId}/users`)
@@ -540,7 +540,12 @@ exports.leaguemates = async (app) => {
             const drafts = await axios.get(`https://api.sleeper.app/v1/league/${leagueId}/drafts`)
             const traded_picks = await axios.get(`https://api.sleeper.app/v1/league/${leagueId}/traded_picks`)
 
+            let matchups = {};
+            if (display_week > 0 && display_week < 19) {
+                const matchup_week = await axios.get(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${display_week}`)
+                matchups[`matchups_${display_week}`] = matchup_week.data
 
+            }
             const draft_picks = getDraftPicks(traded_picks.data, rosters.data, users.data, drafts.data, league.data)
 
             const drafts_array = []
@@ -601,6 +606,7 @@ exports.leaguemates = async (app) => {
                 roster_positions: league.data.roster_positions,
                 rosters: rosters_username,
                 drafts: drafts_array,
+                ...matchups,
                 updatedAt: Date.now()
             }
         } catch (error) {
@@ -609,7 +615,7 @@ exports.leaguemates = async (app) => {
         }
     }
 
-    const getBatchLeaguesDetails = async (leagueIds) => {
+    const getBatchLeaguesDetails = async (leagueIds, display_week) => {
 
         const allResults = [];
 
@@ -618,7 +624,7 @@ exports.leaguemates = async (app) => {
         for (let i = 0; i < leagueIds.length; i += chunkSize) {
             const chunk = leagueIds.slice(i, i + chunkSize);
             const chunkResults = await Promise.all(chunk.map(async (leagueId) => {
-                const result = await getLeagueDetails(leagueId);
+                const result = await getLeagueDetails(leagueId, display_week);
                 return result !== null ? result : undefined;
             }));
             allResults.push(...chunkResults);
