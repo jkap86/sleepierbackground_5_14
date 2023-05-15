@@ -86,7 +86,7 @@ exports.trades = async (app) => {
     const updateTrades = async (app) => {
         const state = app.get('state')
         let i = app.get('trades_sync_counter')
-        const increment = 100
+        const increment = 250
 
         let leagues_to_update;
         try {
@@ -107,8 +107,8 @@ exports.trades = async (app) => {
         const trades_league = []
         const trades_users = []
 
-        for (let i = 0; i < 250; i += 50) {
-            await Promise.all(leagues_to_update.slice(i, i + 50).map(async league => {
+        for (let j = 0; j < increment; j += 50) {
+            await Promise.all(leagues_to_update.slice(j, j + 50).map(async league => {
 
                 let transactions_league;
 
